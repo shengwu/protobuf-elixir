@@ -5,6 +5,7 @@ package my.test;  // dotted package name
 
 //import "imp.proto";
 import "multi/multi1.proto";  // unused import
+import "google/protobuf/descriptor.proto";
 
 enum HatType {
   // deliberately skipping 0
@@ -125,4 +126,20 @@ message Communique {
 
 message Options {
   optional string opt1 = 1 [deprecated=true];
+}
+
+message Foo {
+  optional string buzz = 1;
+  optional bool bar = 2;
+}
+
+extend google.protobuf.FieldOptions {
+  optional Foo foo = 1000;
+}
+
+message Baz {
+  optional string fizz = 1 [
+    (my.test.foo).buzz = "hello world",
+    (my.test.foo).bar = true
+  ];
 }

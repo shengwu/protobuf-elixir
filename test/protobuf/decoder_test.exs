@@ -205,4 +205,81 @@ defmodule Protobuf.DecoderTest do
       end
     end
   end
+
+  describe "extensions" do
+    test "custom boolean extensions" do
+      # Say we have the following extensions defined:
+      #
+      # package example;
+      #
+      # message Foo {
+      #   optional string buzz = 1;
+      #   optional bool bar = 2;
+      # }
+      #
+      # extend google.protobuf.FieldOptions {
+      #   optional Foo foo = 1000;
+      # }
+      #
+      #
+      # We want to make sure an option like (example).foo gets decoded correctly.
+      #
+      # message Baz {
+      #   optional string fizzbuzz = 1 [(example).foo = true];
+      # }
+      #
+      # Most of the time you use extensions you call put_extension, but this is
+      # a special case where you put data in your protobuf definitions.
+      #
+      # I wrote the encoded version by hand to model this (which doesn't work because you
+      # can't use extensions like this)
+      #
+      # Google.Protobuf.FieldDescriptorProto.new!(
+      #   name: "baz",
+      #   number: 1,
+      #   label: :LABEL_OPTIONAL,
+      #   type: :TYPE_STRING,
+      #   options: Google.Protobuf.FieldOptions.new!(
+      #     foo: My.Test.Foo.new!(
+      #       bar: true
+      #     )
+      #   )
+      #  )
+      #
+      # https://developers.google.com/protocol-buffers/docs/reference/cpp/google.protobuf.descriptor.pb
+      encoded_baz_field_descriptor = <<
+        # name: "baz", wire type 010, field number 1, so we need 0000 1010, then the length 3, then baz in ascii
+        10, 3, 98, 97, 122,
+        # number: 1
+        24, 1,
+        # label: :LABEL_OPTIONAL
+        32, 1,
+        # type: :TYPE_STRING
+        40, 9,
+        # options: embedded message, wire type 010, field number 8, so we need 0100 0010, which is 66
+        66,
+        # a varint with the length of the embedded message 'options'
+        5,
+        # foo: an embedded message, wire type 010, field number 1000 (0b1111101000)
+        # so we need a couple of bytes to do the field number and the wire type
+        # need: 1111101000 ++ 010
+        # bytes: 11000010 00111110
+        194, 62,
+        # a varint with the length of the embedded message 'foo'
+        2,
+        # bar (field number 2) is true (1)
+        # 0001 0000 then 0000 00001
+        16, 1
+      >>
+
+      baz_field = Decoder.decode(encoded_baz_field_descriptor, Google.Protobuf.FieldDescriptorProto)
+      assert baz_field.name == "baz"
+      assert baz_field.number == 1
+
+      foo = Google.Protobuf.FieldOptions.get_extension(baz_field.options, My.Test.PbExtension, :foo)
+      assert !is_nil(foo)
+      assert foo.bar == true
+      assert is_nil(foo.buzz)
+    end
+  end
 end

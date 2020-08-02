@@ -253,12 +253,39 @@ defmodule My.Test.Options do
   field :opt1, 1, optional: true, type: :string, deprecated: true
 end
 
+defmodule My.Test.Foo do
+  @moduledoc false
+  use Protobuf, syntax: :proto2
+
+  @type t :: %__MODULE__{
+          buzz: String.t(),
+          bar: boolean
+        }
+  defstruct [:buzz, :bar]
+
+  field :buzz, 1, optional: true, type: :string
+  field :bar, 2, optional: true, type: :bool
+end
+
+defmodule My.Test.Baz do
+  @moduledoc false
+  use Protobuf, syntax: :proto2
+
+  @type t :: %__MODULE__{
+          fizz: String.t()
+        }
+  defstruct [:fizz]
+
+  field :fizz, 1, optional: true, type: :string
+end
+
 defmodule My.Test.PbExtension do
   @moduledoc false
   use Protobuf, syntax: :proto2
 
   extend My.Test.Reply, :tag, 103, optional: true, type: :string
   extend My.Test.Reply, :donut, 106, optional: true, type: My.Test.OtherReplyExtensions
+  extend Google.Protobuf.FieldOptions, :foo, 1000, optional: true, type: My.Test.Foo
   extend My.Test.Reply, :"ReplyExtensions.time", 101, optional: true, type: :double
 
   extend My.Test.Reply, :"ReplyExtensions.carrot", 105,
