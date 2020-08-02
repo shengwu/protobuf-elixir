@@ -241,6 +241,7 @@ defmodule Protobuf.DecoderTest do
       #   type: :TYPE_STRING,
       #   options: Google.Protobuf.FieldOptions.new!(
       #     foo: My.Test.Foo.new!(
+      #       buzz: "a",
       #       bar: true
       #     )
       #   )
@@ -259,14 +260,17 @@ defmodule Protobuf.DecoderTest do
         # options: embedded message, wire type 010, field number 8, so we need 0100 0010, which is 66
         66,
         # a varint with the length of the embedded message 'options'
-        5,
+        8,
         # foo: an embedded message, wire type 010, field number 1000 (0b1111101000)
         # so we need a couple of bytes to do the field number and the wire type
         # need: 1111101000 ++ 010
         # bytes: 11000010 00111110
         194, 62,
         # a varint with the length of the embedded message 'foo'
-        2,
+        5,
+        # buzz (field number 1) is "a"
+        # 0000 1010, then 0000 0001, then (97)
+        10, 1, 97,
         # bar (field number 2) is true (1)
         # 0001 0000 then 0000 00001
         16, 1
@@ -277,9 +281,7 @@ defmodule Protobuf.DecoderTest do
       assert baz_field.number == 1
 
       foo = Google.Protobuf.FieldOptions.get_extension(baz_field.options, My.Test.PbExtension, :foo)
-      assert !is_nil(foo)
-      assert foo.bar == true
-      assert is_nil(foo.buzz)
+      assert foo == My.Test.Foo.new(buzz: "a", bar: true)
     end
   end
 end
